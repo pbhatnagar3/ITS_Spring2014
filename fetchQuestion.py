@@ -15,6 +15,9 @@ class fetchQuestion(object):
 	filt_concepts_handle = None
 	its_query_handle = None
 	its_table_handle = None
+	usedQuestions = None
+	usedConcepts = None
+	dictionary = None
 	#Place to declare all the local variables
 	
 	def get_category(self,chapter):
@@ -29,23 +32,35 @@ class fetchQuestion(object):
 			7: """category REGEXP "(SPEN7$|PreLab07$|Lab7$|Chapter7$|-Mod7$)" AND questions.qtype IN ("MC","M","C")""",
 			8: """category REGEXP "(SPEN1$|PreLab01$|Lab1$|Chapter1$|-Mod1$|Complex$|SPEN2$|PreLab02$|Lab2$|Chapter2$|-Mod2$|SPEN3$|PreLab03$|Lab3$|Chapter3$|-Mod3$|SPEN4$|PreLab04$|Lab4$|Chapter4$|-Mod4$|SPEN5$|PreLab05$|Lab5$|Chapter5$|-Mod5$|SPEN6$|PreLab06$|Lab6$|Chapter6$|-Mod6$)" AND questions.qtype IN ("MC","M","C")""",
 		}[chapter]
-		
+	
+	def fetch_Questions(self,concept):
+		query_questions_ID_difficulty = "select q_id, difficulty from questions_difficulty where q_id IN (select questions_id from questions_tags where tags_id =" + str(concept) + ")"
+		#print query_questions_ID_difficulty
+		resulting_questions_difficulty = self.its_query_handle.exec_its_query(query_questions_ID_difficulty);
+		resulting_questions_difficulty = sorted(resulting_questions_difficulty, key=lambda tup: tup[1], reverse = True)
+		#print resulting_questions_difficulty[1][0]
+		if len(resulting_questions_difficulty) > 1:
+			result = (resulting_questions_difficulty[0][0], resulting_questions_difficulty[1][0])
+		else:
+			result = (resulting_questions_difficulty[0][0], 0)
+		return result
+			
 	# constructor	
 	def __init__(self):
-		
 		self.its_query_handle = itsq.its_query()
 		self.its_query_handle.open_connection()
-		
 		self.filt_concepts_handle = filt_concepts.filt_concepts()
-		usedQuestions = []
-		usedConcepts = []
-		dictionary = self.filt_concepts_handle.concept_cross_correlation_dic
+		self.usedQuestions = []
+		self.usedConcepts = []
+		self.dictionary = self.filt_concepts_handle.concept_cross_correlation_dic
 		#print dictionary
-		#assuming that all the difficulty is being taken care
+		self.allData()
+		
+	def allData(self):
 		for i in self.filt_concepts_handle.tier_one_condidate_concepts:
 			#print i
 			#all the concepts related to a particular concept
-			temp = dictionary[i]
+			temp = self.dictionary[i]
 			#temp is a list of tuple
 			#print temp
 			#Query calculates tags, and total occurrences.
@@ -57,20 +72,8 @@ class fetchQuestion(object):
 				for k in resulting_questions:
 					print k
 				"""
-				query_questions_ID_difficulty = "select q_id, difficulty from questions_difficulty where q_id IN (select questions_id from questions_tags where tags_id =" + str(j[0]) + ")"
-				#print query_questions_ID_difficulty
-				resulting_questions_difficulty = self.its_query_handle.exec_its_query(query_questions_ID_difficulty);
-				resulting_questions_difficulty = sorted(resulting_questions_difficulty, key=lambda tup: tup[1], reverse = True)
-				#print resulting_questions_difficulty[1][0]
-				if len(resulting_questions_difficulty) > 1:
-					result = (resulting_questions_difficulty[0][0], resulting_questions_difficulty[1][0])
-				else:
-					result = (resulting_questions_difficulty[0][0], 0)
-				print result
-				 
-			
-		
-		
-			
-
-		
+				questions = self.fetch_Questions(j[0])
+				for q in questions:
+					if not q == 0:
+						self.usedQuestions.append(q)
+				self.usedConcepts.append(j[0])
